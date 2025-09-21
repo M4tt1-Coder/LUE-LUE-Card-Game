@@ -1,0 +1,14 @@
+{
+  "name": "lue-lue-backend",
+  "version": "1.0.0",
+  "description": "Lue Lue backend server",
+  "main": "index.js",
+  "scripts": {
+    "dev": "npx wrangler dev --local",
+    "prod_up": "npx wrangler deploy"
+  },
+  "keywords": [],
+  "author": "Matthis Geißler",
+  "license": "MIT",
+  "packageManager": "pnpm@10.17.0"
+}
