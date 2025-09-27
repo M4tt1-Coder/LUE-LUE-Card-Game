@@ -1,0 +1,17 @@
+name = "lue-lue-game"
+main = "build/worker/shim.mjs"
+compatibility_date = "2025-09-21"
+
+[assets]
+binding = "ASSETS"
+directory = "./public/"
+
+[build]
+command = "cargo leptos build --release && LEPTOS_OUTPUT_NAME=lue_lue_game worker-build --release --features ssr"
+# command = "cargo install -q worker-build && worker-build --release"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "luelue-database"
+database_id = "a402410d-3490-485f-abf2-8752af022401"
+migrations_dir = "./migrations/"
