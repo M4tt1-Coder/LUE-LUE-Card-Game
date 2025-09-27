@@ -85,5 +85,5 @@ async fn fetch(
 pub fn hydrate() {
     use crate::app::*;
     console_error_panic_hook::set_once();
-    mount::mount_to_body(App);
+    mount::mount_to_body(|| view! { <App/> });
 }

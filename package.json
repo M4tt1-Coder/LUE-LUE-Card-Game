@@ -4,9 +4,7 @@
   "description": "A simple web game built with Cloudflare Workers",
   "main": "index.js",
   "scripts": {
-    "build:local": "cargo leptos build",
-    "build:watch": "cargo leptos watch",
-    "dev": "npx wrangler dev --local",
+    "dev": "wrangler dev --local",
     "prod_up": "npx wrangler deploy"
   },
   "keywords": [],
