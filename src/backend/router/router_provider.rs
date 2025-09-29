@@ -46,6 +46,7 @@ cfg_if! {
 
 
         Router::new()
+        // Register all necessary endpoints
         // game instance endpoints
         .route("/api/game/update", put(update_game))
         .leptos_routes(&leptos_options, routes,{
