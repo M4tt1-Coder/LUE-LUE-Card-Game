@@ -7,8 +7,8 @@ binding = "ASSETS"
 directory = "./public/"
 
 [build]
-command = "cargo leptos build --release && LEPTOS_OUTPUT_NAME=lue_lue_game worker-build --release --features ssr"
-# command = "cargo install -q worker-build && worker-build --release"
+# command = "cargo leptos build --release && LEPTOS_OUTPUT_NAME=lue_lue_game worker-build --release --features ssr"
+command = "cargo install -q worker-build && worker-build --release"
 
 [[d1_databases]]
 binding = "DB"

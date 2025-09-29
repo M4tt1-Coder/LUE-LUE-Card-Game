@@ -21,7 +21,7 @@ console_error_panic_hook = { version = "0.1.7" }
 leptos_axum = { version = "0.8.6", default-features = false, features = ['wasm'], optional = true }
 leptos_meta = { version = "0.8.5" }
 wasm-bindgen = { version = "^0.2.104" }
-tokio = { version = "1.47.1", default-features = false, features = ["rt-multi-thread"], optional = true }
+# tokio = { version = "1.47.1", default-features = false, features = ["rt-multi-thread"], optional = true }
 worker = { version = "0.6.6", features = ['http', 'axum', "d1"], optional = true }
 worker-macros = { version = "0.6.6", features = ['http'], optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
@@ -47,7 +47,7 @@ hydrate = [
 ]
 ssr = [
     "dep:axum",
-    "dep:tokio",
+    # "dep:tokio",
     "dep:leptos_axum",
     "dep:worker",
     "dep:worker-macros",

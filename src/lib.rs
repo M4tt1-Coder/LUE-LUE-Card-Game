@@ -1,3 +1,5 @@
+// maybe 2 workers or page + worker is needed to host the app
+
 // TODO: Read the book for leptos -> https://book.leptos.dev/
 // TODO: Watch Axum tutoial -> https://www.youtube.com/watch?v=XZtlD_m59sM
 
