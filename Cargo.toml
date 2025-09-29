@@ -16,12 +16,12 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 leptos = { version = "0.8.9", features = ["nightly"] }
 leptos_router = { version = "0.8.7", features = ["nightly"] }
-axum = { version = "0.8.4", optional = true }
-console_error_panic_hook = { version = "0.1.7" }
+axum = { version = "0.8.4", default-features = false, features = ['json'], optional = true }
+# console_error_panic_hook = { version = "0.1.7" }
 leptos_axum = { version = "0.8.6", default-features = false, features = ['wasm'], optional = true }
 leptos_meta = { version = "0.8.5" }
 wasm-bindgen = { version = "^0.2.104" }
-# tokio = { version = "1.47.1", default-features = false, features = ["rt-multi-thread"], optional = true }
+tokio = { version = "1.47.1", default-features = false, features = [], optional = true }
 worker = { version = "0.6.6", features = ['http', 'axum', "d1"], optional = true }
 worker-macros = { version = "0.6.6", features = ['http'], optional = true }
 serde = { version = "1.0.228", features = ["derive"] }
@@ -34,6 +34,7 @@ log = "0.4.28"
 rand_chacha = "0.9.0"
 cfg-if = "1.0.3"
 tower-service = { version = "0.3.3", optional = true }
+getrandom = { version = "0.3.3", features = ["wasm_js"] }
 
 [dev-dependencies]
 axum-test = { version = '18.1.0' }
@@ -47,7 +48,7 @@ hydrate = [
 ]
 ssr = [
     "dep:axum",
-    # "dep:tokio",
+    "dep:tokio",
     "dep:leptos_axum",
     "dep:worker",
     "dep:worker-macros",

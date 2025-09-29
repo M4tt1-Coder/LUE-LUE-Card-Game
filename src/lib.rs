@@ -1,19 +1,9 @@
-// maybe 2 workers or page + worker is needed to host the app
-
 // TODO: Read the book for leptos -> https://book.leptos.dev/
 // TODO: Watch Axum tutoial -> https://www.youtube.com/watch?v=XZtlD_m59sM
 
-// TODO: How do I need to build my entry point for cloudflare workers? -> https://book.leptos.dev/server/26_extractors.html
-
+// https://github.com/cloudflare/workers-rs/tree/main/templates/leptos
 // https://github.com/bakcxoj/leptos-workers
 // https://github.com/DylanRJohnston/leptos-cloudflare-example
-
-// TODO: Find a way to pass the D1 database binding to the axum handlers
-// - D1Database does not implement Clone, so we cannot store it in the AppState -> try for
-// validation
-// - try to pass d1database binding to each handler in the 'AppState' -> not nice, but works for now
-// - try to work with the reference of the d1database binding -> maybe use a smart pointer like Rc
-// or Arc
 
 mod app;
 mod backend;
@@ -40,7 +30,7 @@ async fn fetch(
     use tower_service::Service;
     use worker::*;
 
-    console_error_panic_hook::set_once();
+    // console_error_panic_hook::set_once();
 
     // TODO: Try to important all options from .env
     // Define the leptos options
@@ -86,6 +76,6 @@ async fn fetch(
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
     use crate::app::*;
-    console_error_panic_hook::set_once();
+    // console_error_panic_hook::set_once();
     mount::mount_to_body(|| view! { <App/> });
 }

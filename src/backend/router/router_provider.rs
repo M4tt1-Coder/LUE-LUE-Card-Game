@@ -46,10 +46,12 @@ cfg_if! {
 
 
         Router::new()
-        .route("/api/*fn_name", post(leptos_axum::handle_server_fns))
         // game instance endpoints
         .route("/api/game/update", put(update_game))
-        .leptos_routes(&leptos_options, routes,|| view! { <App /> })
+        .leptos_routes(&leptos_options, routes,{
+            let leptos_options = leptos_options.clone();
+            move || shell(leptos_options.clone())
+        })
         // .fallback()  TODO: Add a fallback handler / page
         .with_state(leptos_options)
         .layer(Extension(Arc::new(env)))
