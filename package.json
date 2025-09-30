@@ -1,14 +1,17 @@
 {
-  "name": "lue-lue-backend",
+  "name": "lue-lue-game",
   "version": "1.0.0",
-  "description": "Lue Lue backend server",
+  "description": "A simple web game built with Cloudflare Workers",
   "main": "index.js",
   "scripts": {
-    "dev": "npx wrangler dev --local",
+    "dev": "wrangler dev --local",
     "prod_up": "npx wrangler deploy"
   },
   "keywords": [],
   "author": "Matthis Geißler",
   "license": "MIT",
-  "packageManager": "pnpm@10.17.0"
+  "packageManager": "pnpm@10.17.1",
+  "dependencies": {
+    "tailwindcss": "^4.1.13"
+  }
 }
