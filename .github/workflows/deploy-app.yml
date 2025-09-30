@@ -9,6 +9,9 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
       - name: Get cargo
         run: |
           curl https://sh.rustup.rs -y -sSf | sh
