@@ -1,4 +1,7 @@
 name: Deploy Worker
+permissions:
+  contents: read
+  pull-requests: writ
 on:
   push:
     branches:

@@ -14,9 +14,9 @@ categories = [ "web-programming", "game-development" ]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-leptos = { version = "0.8.9", features = ["nightly"] }
-leptos_router = { version = "0.8.7", features = ["nightly"] }
-axum = { version = "0.8.4", default-features = false, features = ['json'], optional = true }
+leptos = { version = "0.8.10", features = ["nightly"] }
+leptos_router = { version = "0.8.6", features = ["nightly"] }
+axum = { version = "0.8.6", default-features = false, features = ['json'], optional = true }
 leptos_axum = { version = "0.8.6", default-features = false, features = ['wasm'], optional = true }
 leptos_meta = { version = "0.8.5" }
 wasm-bindgen = { version = "^0.2.104" }
@@ -34,6 +34,7 @@ rand_chacha = "0.9.0"
 cfg-if = "1.0.3"
 tower-service = { version = "0.3.3", optional = true }
 getrandom = { version = "0.3.3", features = ["wasm_js"] }
+leptos_integration_utils = "0.8.6"
 
 [dev-dependencies]
 axum-test = { version = '18.1.0' }

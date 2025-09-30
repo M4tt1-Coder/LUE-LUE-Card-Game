@@ -28,9 +28,7 @@ async fn fetch(
     use std::env;
     use std::sync::Arc;
     use tower_service::Service;
-    use worker::*;
-
-    // console_error_panic_hook::set_once();
+    // use worker::*;
 
     // TODO: Try to important all options from .env
     // Define the leptos options

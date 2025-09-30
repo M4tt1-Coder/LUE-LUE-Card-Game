@@ -44,7 +44,6 @@ cfg_if! {
          // retrieve all leptos routes
         let routes = generate_route_list(|| view! { <App />});
 
-
         Router::new()
         // Register all necessary endpoints
         // game instance endpoints

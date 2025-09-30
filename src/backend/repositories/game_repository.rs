@@ -551,7 +551,7 @@ impl GameRepository {
                         Ok(_) => return Ok(chat.clone()),
                         Err(err) => return Err(err)
                     },
-                    Err(err) => return Err(Box::new(err))
+                    Err(err) => return Err(err)
                 }
             }
 
@@ -559,7 +559,7 @@ impl GameRepository {
             // added to the queue
             let all_current_messages = match chat_message_repo.get_all_messages_in_chat(&chat.id).await {
                 Ok(messages) => messages,
-                Err(err) => return Err(Box::new(err))
+                Err(err) => return Err(err)
             };
 
             // retrieve all ids of the messages that can be removed
@@ -598,7 +598,7 @@ impl GameRepository {
             for message in new_messages {
                 match chat_message_repo.save_message(message).await {
                     Ok(_) => (),
-                    Err(err) => return Err(Box::new(err))
+                    Err(err) => return Err(err)
                 }
             }
 
