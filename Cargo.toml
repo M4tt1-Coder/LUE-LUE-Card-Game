@@ -15,8 +15,8 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 leptos = { version = "0.8.10", features = ["nightly"] }
-leptos_router = { version = "0.8.6", features = ["nightly"] }
-axum = { version = "0.8.6", default-features = false, features = ['json'], optional = true }
+leptos_router = { version = "0.8.8", features = ["nightly"] }
+axum = { version = "^0.8.6", default-features = false, features = ['json'], optional = true }
 leptos_axum = { version = "0.8.6", default-features = false, features = ['wasm'], optional = true }
 leptos_meta = { version = "0.8.5" }
 wasm-bindgen = { version = "^0.2.104" }

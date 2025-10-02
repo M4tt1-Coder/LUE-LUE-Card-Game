@@ -193,7 +193,7 @@ impl GameRepository {
                     };
                     game.claims = match claim_repo.get_all_claims(Some(&game.id), None, card_repo).await {
                         Ok(claims) => claims,
-                        Err(err) => return Err(Box::new(err))
+                        Err(err) => return Err(err)
                     };
                     Ok(game)
                 },
@@ -251,7 +251,7 @@ impl GameRepository {
                         // claims
                         let claims = match claims_repo.get_all_claims(Some(&game.id), None, card_repo).await {
                             Ok(claims) => claims,
-                            Err(err) => return Err(Box::new(err))
+                            Err(err) => return Err(err)
                         };
 
                         // Assign claims to the game
@@ -482,41 +482,20 @@ impl GameRepository {
             // delete all claims of the game
             match claims_repo.delete_all_claims_of_game(&game_data.id).await {
                 Ok(_) => {},
-                Err(err) => return Err(DatabaseQueryError {
-                    message: err.message,
-                    received_data: match err.received_data {
-                        None => None,
-                        Some(_) => Some(Json(game_data.clone()))
-                    },
-                    status_code: err.status_code
-                })
+                Err(err) => return Err(err)
             };
         } else {
             // when there is one element, it will be added to the claims list of a game.
             // add the claim to the database
             match claims_repo.create_claim(game_data.claims.clone().unwrap()[1].clone(), card_repo).await {
                 Ok(_) => {},
-                Err(err) => return Err(DatabaseQueryError {
-                    message: err.message,
-                    received_data: match err.received_data {
-                        None => None,
-                        Some(_) => Some(Json(game_data.clone()))
-                    },
-                    status_code: err.status_code
-                })
+                Err(err) => return Err(err)
             };
         }
 
         Ok(match claims_repo.get_all_claims(Some(&game_data.id), None, card_repo).await {
             Ok(claims) => claims,
-            Err(err) => return Err(DatabaseQueryError {
-                message: err.message,
-                received_data: match err.received_data {
-                    None => None,
-                    Some(_) => Some(Json(game_data.clone()))
-                },
-                status_code: err.status_code
-            })
+            Err(err) => return Err(err)
         })
     }
 

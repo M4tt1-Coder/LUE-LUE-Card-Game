@@ -8,7 +8,7 @@ use wasm_bindgen::JsValue;
 use worker::D1Database;
 
 use crate::backend::{
-    errors::database_query_error::DatabaseQueryError,
+    errors::{application_error::ApplicationError, database_query_error::DatabaseQueryError},
     repositories::card_repository::CardRepository,
     types::{card::UpdateCardDTO, claim::Claim},
 };
@@ -41,29 +41,36 @@ impl ClaimsRepository {
     /// - `id` -> Identifier of the `Claim` object.
     ///
     /// # Returns a `Claim` instance
-    pub async fn get_claim_by_id(&self, id: String) -> Result<Claim, DatabaseQueryError<Claim>> {
-        let query_result = self
+    pub async fn get_claim_by_id(&self, id: String) -> Result<Claim, Box<dyn ApplicationError>> {
+        let query_result = match self
             .db
             .prepare("SELECT * FROM claims WHERE id = ?;")
             .bind(&[JsValue::from(id.clone())])
-            .unwrap()
-            .first::<Claim>(None)
-            .await;
+        {
+                Ok(fetched_data) => fetched_data.first::<Claim>(None).await,
+                Err(err) => return Err(Box::new(
+                        DatabaseQueryError::<Claim>::new(
+                            err.to_string(),
+                            None,
+                            StatusCode::INTERNAL_SERVER_ERROR
+                        )
+                    ))
+        };
 
         match query_result {
             Ok(fetched_claim) => match fetched_claim {
                 Some(claim) => Ok(claim),
-                None => Err(DatabaseQueryError {
+                None => Err(Box::new(DatabaseQueryError::<Claim> {
                     message: format!("The claim with the id {} couldn't be found!", id),
                     received_data: None,
                     status_code: StatusCode::NOT_FOUND,
-                }),
+                })),
             },
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Claim>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -78,13 +85,12 @@ impl ClaimsRepository {
     /// If both are `None`, all claims will be returned.
     ///
     /// # Returns a vector of `Claim` instances or an error if the query fails.
-
     pub async fn get_all_claims(
         &self,
         game_id: Option<&str>,
         player_id: Option<&str>,
         card_repository: &CardRepository,
-    ) -> Result<Vec<Claim>, DatabaseQueryError<Claim>> {
+    ) -> Result<Vec<Claim>, Box<dyn ApplicationError>> {
         let mut query = "SELECT * FROM claims".to_string();
         let mut params: Vec<JsValue> = Vec::new();
 
@@ -98,18 +104,25 @@ impl ClaimsRepository {
 
         query.push_str(";");
 
-        let query_result = self.db.prepare(&query).bind(&params).unwrap().all().await;
+        let query_result = match self.db.prepare(&query).bind(&params){
+            Ok(fetched_data) => fetched_data.all().await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Claim>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match query_result {
             Ok(fetched_claims) => {
                 let mut extracted_claims = match fetched_claims.results::<Claim>() {
                     Ok(claims) => claims,
                     Err(err) => {
-                        return Err(DatabaseQueryError::new(
+                        return Err(Box::new(DatabaseQueryError::<Claim>::new(
                             err.to_string(),
                             None,
                             StatusCode::INTERNAL_SERVER_ERROR,
-                        ));
+                        )));
                     }
                 };
 
@@ -122,11 +135,7 @@ impl ClaimsRepository {
                     claim.cards = match query_result {
                         Ok(cards) => cards,
                         Err(err) => {
-                            return Err(DatabaseQueryError::new(
-                                err.message,
-                                Some(Json(claim.clone())),
-                                err.status_code,
-                            ));
+                            return Err(err);
                         }
                     };
 
@@ -135,11 +144,11 @@ impl ClaimsRepository {
 
                 Ok(extracted_claims)
             }
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Claim>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -156,7 +165,7 @@ impl ClaimsRepository {
         &self,
         claim: Claim,
         card_repository: &CardRepository,
-    ) -> Result<Claim, DatabaseQueryError<Claim>> {
+    ) -> Result<Claim, Box<dyn ApplicationError>> {
         let query =
             "INSERT INTO claims (id, created_by, number_of_cards, cards) VALUES (?, ?, ?, ?);";
         let params = vec![
@@ -165,7 +174,14 @@ impl ClaimsRepository {
             JsValue::from(claim.number_of_cards as i32),
         ];
 
-        let query_result = self.db.prepare(query).bind(&params).unwrap().run().await;
+        let query_result = match self.db.prepare(query).bind(&params) {
+            Ok(inserted_data) => inserted_data.run().await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Claim>::new(
+                err.to_string(),
+                Some(Json(claim.clone())),
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         // cards need to be stored separatly
         for card in &claim.cards {
@@ -174,31 +190,23 @@ impl ClaimsRepository {
                     match UpdateCardDTO::new(card.id.clone(), None, None, Some(claim.id.clone())) {
                         Ok(update_card) => update_card,
                         Err(err) => {
-                            return Err(DatabaseQueryError::new(
-                                err.message,
-                                Some(Json(claim.clone())),
-                                StatusCode::INTERNAL_SERVER_ERROR,
-                            ));
+                            return Err(Box::new(err));
                         }
                     },
                 )
                 .await;
             if let Err(err) = res {
-                return Err(DatabaseQueryError::new(
-                    err.message,
-                    Some(Json(claim.clone())),
-                    err.status_code,
-                ));
+                return Err(err);
             }
         }
 
         match query_result {
             Ok(_) => Ok(claim),
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Claim>::new(
                 err.to_string(),
                 Some(Json(claim)),
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -209,22 +217,27 @@ impl ClaimsRepository {
     /// - `id` -> Identifier of the `Claim` object to be deleted.
     ///
     /// # Returns `Ok(())` if the deletion is successful, or an error if it fails.
-    pub async fn delete_claim(&self, claim_id: String) -> Result<(), DatabaseQueryError<Claim>> {
-        let query_result = self
+    pub async fn delete_claim(&self, claim_id: String) -> Result<(), Box<dyn ApplicationError>> {
+        let query_result = match self
             .db
             .prepare("DELETE FROM claims WHERE id = ?;")
             .bind(&[JsValue::from(claim_id)])
-            .unwrap()
-            .run()
-            .await;
+        {
+            Ok(removed_data) => removed_data.run().await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Claim>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match query_result {
             Ok(_) => Ok(()),
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Claim>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -238,22 +251,27 @@ impl ClaimsRepository {
     pub async fn delete_all_claims_of_game(
         &self,
         game_id: &str,
-    ) -> Result<(), DatabaseQueryError<Claim>> {
-        let query_result = self
+    ) -> Result<(), Box<dyn ApplicationError>> {
+        let query_result = match self
             .db
             .prepare("DELETE FROM claims WHERE game_id = ?;")
             .bind(&[JsValue::from(game_id)])
-            .unwrap()
-            .run()
-            .await;
+        {
+            Ok(removed_data) => removed_data.run().await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Claim>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match query_result {
             Ok(_) => Ok(()),
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Claim>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 }
