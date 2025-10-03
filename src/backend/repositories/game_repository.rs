@@ -57,8 +57,8 @@ impl GameRepository {
     /// # Returns
     ///
     /// A `Result` indicating success or failure of the operation.
-    pub async fn add_game(&self, game: Game) -> Result<Game, DatabaseQueryError<Game>> {
-        let added_game = self
+    pub async fn add_game(&self, game: Game) -> Result<Game, Box<dyn ApplicationError>> {
+        let added_game = match self
             .db
             .prepare(
                 "INSERT INTO games (id, started_at, round_number, state, which_players_turn, card_to_play)
@@ -71,22 +71,30 @@ impl GameRepository {
                 JsValue::from(game.state.index()),
                 JsValue::from(game.which_player_turn),
                 JsValue::from(game.card_to_play.index()),
-            ]).unwrap().first::<Game>(None).await;
+            ])
+            {
+                Ok(inserted_data) => inserted_data.first::<Game>(None).await,
+                Err(err) => return Err(Box::new(DatabaseQueryError::<Game>::new(
+                    err.to_string(),
+                    None,
+                    StatusCode::INTERNAL_SERVER_ERROR
+                )))
+            };
 
         match added_game {
-            Ok(game) => match game {
-                Some(game) => Ok(game),
-                None => Err(DatabaseQueryError::new(
+            Ok(game_data) => match game_data {
+                Some(created_game) => Ok(created_game),
+                None => Err(Box::new(DatabaseQueryError::<Game>::new(
                     "Failed to add game to the database".to_string(),
-                    None,
+                    Some(Json(game.clone())),
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                )),
+                ))),
             },
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::new(
                 err.to_string(),
-                None,
+                Some(Json(game.clone())),
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -110,25 +118,30 @@ impl GameRepository {
     ) -> Result<Game, Box<dyn ApplicationError>> {
         let (query, bindings) = self.get_update_query_string_and_bindings(&game_data);
 
-        let query_result = self
+        let query_result = match self
             .db
             .prepare(&query)
             .bind(&bindings)
-            .unwrap()
-            .first::<Game>(None)
-            .await;
+            {
+                Ok(modified_data) => modified_data.first::<Game>(None).await,
+                Err(err) => return Err(Box::new(DatabaseQueryError::<UpdateGameDTO>::new(
+                    err.to_string(),
+                    Some(Json(game_data.clone())),
+                    StatusCode::INTERNAL_SERVER_ERROR
+                )))
+            };
 
         match query_result {
             Ok(game) => match game {
                 Some(mut updated_game) => {
                     updated_game.players = match self.update_players_in_game(&game_data, player_repo, card_repo).await {
                         Ok(players) => players,
-                        Err(err) => return Err(Box::new(err))
+                        Err(err) => return Err(err)
                     };
 
                     updated_game.claims = match self.update_claims_of_game(&game_data, claims_repo, card_repo).await {
                         Ok(claims) => claims,
-                        Err(err) => return Err(Box::new(err))
+                        Err(err) => return Err(err)
                     };
 
                     updated_game.chat = match self.update_chat_of_game(&game_data, chat_repo, chat_message_repo).await {
@@ -138,15 +151,15 @@ impl GameRepository {
 
                     return Ok(updated_game);
                 },
-                None => Err(Box::new(DatabaseQueryError::<Game>::new(
+                None => Err(Box::new(DatabaseQueryError::<UpdateGameDTO>::new(
                     "Failed to update game in the database".to_string(),
-                    None,
+                    Some(Json(game_data.clone())),
                     axum::http::StatusCode::INTERNAL_SERVER_ERROR,
                 ))),
             },
-            Err(err) => Err(Box::new(DatabaseQueryError::<Game>::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<UpdateGameDTO>::new(
                 err.to_string(),
-                None,
+                Some(Json(game_data.clone())),
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             ))),
         }
@@ -171,13 +184,18 @@ impl GameRepository {
         chat_message_repo: &ChatMessageRepository,
         card_repo: &CardRepository
     ) -> Result<Game, Box<dyn ApplicationError>> {
-        let query_result = self
+        let query_result = match self
             .db
             .prepare("SELECT * FROM games WHERE id = ?;")
             .bind(&[JsValue::from(game_id)])
-            .unwrap()
-            .first::<Game>(None)
-            .await;
+            {
+                Ok(fetched_data) => fetched_data.first::<Game>(None).await,
+                Err(err) => return Err(Box::new(DatabaseQueryError::<Game>::new(
+                    err.to_string(),
+                    None,
+                    StatusCode::INTERNAL_SERVER_ERROR
+                )))
+            };
 
         match query_result {
             Ok(game) => match game {
@@ -189,7 +207,7 @@ impl GameRepository {
 
                     game.players = match player_repo.get_all_players(Some(&game.id), card_repo).await {
                         Ok(players) => players,
-                        Err(err) => return Err(Box::new(err))
+                        Err(err) => return Err(err)
                     };
                     game.claims = match claim_repo.get_all_claims(Some(&game.id), None, card_repo).await {
                         Ok(claims) => claims,
@@ -218,23 +236,35 @@ impl GameRepository {
     /// A `Result` containing a vector of `Game` instances if successful, or a `DatabaseQueryError`
     /// if an error occurs.
     pub async fn get_all_games(&self, player_repo: &PlayerRepository, card_repo: &CardRepository, claims_repo: &ClaimsRepository, chat_repo: &ChatRepository, chat_message_repo: &ChatMessageRepository) -> Result<Vec<Game>, Box<dyn ApplicationError>> {
-        let query_result = self
+        let query_result = match self
             .db
             .prepare("SELECT * FROM games;")
             .bind(&[])
-            .unwrap()
-            .all()
-            .await;
+        {
+            Ok(fetched_data) => fetched_data.all().await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Game>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match query_result {
             Ok(collected_games) => {
-                let mut output: Vec<Game> = collected_games.results::<Game>().unwrap();
+                let mut output: Vec<Game> = match collected_games.results::<Game>() {
+                    Ok(games) => games,
+                    Err(err) => return Err(Box::new(DatabaseQueryError::<Game>::new(
+                        err.to_string(),
+                        None,
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    )))
+                };
 
                 if output.is_empty() {
                     Err(Box::new(DatabaseQueryError::<Game>::new(
                         "No games found".to_string(),
                         None,
-                        axum::http::StatusCode::NOT_FOUND,
+                        StatusCode::NOT_FOUND,
                     )))
                 } else {
 
@@ -243,7 +273,7 @@ impl GameRepository {
                         // players
                         let players = match player_repo.get_all_players(Some(&game.id), card_repo).await {
                             Ok(players) => players,
-                            Err(err) => return Err(Box::new(err))
+                            Err(err) => return Err(err)
                         };
                         // Assign players to the game
                         game.players = players;
@@ -271,7 +301,7 @@ impl GameRepository {
             Err(err) => Err(Box::new(DatabaseQueryError::<Game>::new(
                 err.to_string(),
                 None,
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                StatusCode::INTERNAL_SERVER_ERROR,
             ))),
         }
     }
@@ -285,22 +315,27 @@ impl GameRepository {
     /// # Returns
     ///
     /// A `Result` indicating success or failure of the operation.
-    pub async fn delete_game(&self, game_id: &str) -> Result<(), DatabaseQueryError<Game>> {
-        let query_result = self
+    pub async fn delete_game(&self, game_id: &str) -> Result<(), Box<dyn ApplicationError>> {
+        let query_result = match self
             .db
             .prepare("DELETE FROM games WHERE id = ?;")
             .bind(&[JsValue::from(game_id)])
-            .unwrap()
-            .run()
-            .await;
+        {
+            Ok(temporary_data) => temporary_data.run().await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match query_result {
             Ok(_) => Ok(()),
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Game>::new(
                 err.to_string(),
                 None,
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))),
         }
     }
 
@@ -367,23 +402,23 @@ impl GameRepository {
         game_data: &UpdateGameDTO,
         player_repo: &PlayerRepository,
         card_repo: &CardRepository
-    ) -> Result<Vec<Player>, DatabaseQueryError<UpdateGameDTO>> {
+    ) -> Result<Vec<Player>, Box<dyn ApplicationError>> {
         // just to make sure that the needed data was provided
         let new_players = match &game_data.players {
             None => {
-                return Err(DatabaseQueryError {
+                return Err(Box::new(DatabaseQueryError::<UpdateGameDTO> {
                     message: "Function was called with invalid data passed to it! A new list of players is mandatory!".to_string(),
                     received_data: None,
                     status_code: StatusCode::INTERNAL_SERVER_ERROR
-                });
+                }));
             },
             Some(players) => {
                 if players.len() == 0 {
-                    return Err(DatabaseQueryError {
+                    return Err(Box::new(DatabaseQueryError::<UpdateGameDTO> {
                         message: "An empty list of players was provided! That's an invalid data input!".to_string(),
                         received_data: None,
                         status_code: StatusCode::BAD_REQUEST
-                    });
+                    }));
                 }
                 players
             }
@@ -393,14 +428,7 @@ impl GameRepository {
         let all_current_players: Vec<Player> = match player_repo.get_all_players(Some(&game_data.id), card_repo).await {
             Ok(players) => players,
             Err(err) => {
-                return Err(DatabaseQueryError::new(
-                    err.message,
-                    match err.received_data {
-                        None => None,
-                        Some(_) => Some(Json(game_data.clone())),
-                    },
-                    err.status_code,
-                ))
+                return Err(err)
             }
         };
 
@@ -412,14 +440,7 @@ impl GameRepository {
                     // delete the player
                     match player_repo.delete_player(&player.id).await {
                         Ok(_) => continue,
-                        Err(err) => return Err(DatabaseQueryError {
-                            message: err.message,
-                            received_data: match err.received_data {
-                                None => None,
-                                Some(_) => Some(Json(game_data.clone()))
-                            },
-                            status_code: err.status_code
-                        })
+                        Err(err) => return Err(err)
                     };
                 }
                 Some(_) => continue
@@ -432,20 +453,12 @@ impl GameRepository {
                 None => {
                     match player_repo.add_player(player.clone()).await {
                         Ok(_) => continue,
-                        Err(err) => return Err(DatabaseQueryError {
-                            message: err.message,
-                            received_data: match err.received_data {
-                                None => None,
-                                Some(_) => Some(Json(game_data.clone()))
-                            },
-                            status_code: err.status_code
-                        })
+                        Err(err) => return Err(err)
                     }
                 }
                 Some(_) => continue
             }
         }
-
 
         // return modified list of players
         Ok(all_current_players)
@@ -467,14 +480,14 @@ impl GameRepository {
     ///
     /// - Returns a `DatabaseQueryError` if the `claims` field in `game_data` is `None`.
     /// - Returns a `DatabaseQueryError` if there is an error while deleting or adding claims
-    async fn update_claims_of_game(&self, game_data: &UpdateGameDTO, claims_repo: &ClaimsRepository, card_repo: &CardRepository) -> Result<Vec<Claim>, DatabaseQueryError<UpdateGameDTO>> {
+    async fn update_claims_of_game(&self, game_data: &UpdateGameDTO, claims_repo: &ClaimsRepository, card_repo: &CardRepository) -> Result<Vec<Claim>, Box<dyn ApplicationError>> {
         // first check if the needed data was provided
         if let None = &game_data.claims {
-            return Err(DatabaseQueryError {
+            return Err(Box::new(DatabaseQueryError::<UpdateGameDTO> {
                 message: "Function was called with invalid data passed to it! A new list of claims is mandatory!".to_string(),
                 received_data: None,
                 status_code: StatusCode::INTERNAL_SERVER_ERROR
-            });
+            }));
         }
 
         // when the array is empty, all claims in the list of the game will be deleted.
