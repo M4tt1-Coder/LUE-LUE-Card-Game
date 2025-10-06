@@ -3,12 +3,12 @@ cfg_if! {
     if #[cfg(feature = "ssr")] {
 
 
-use axum::Json;
+use axum::{Json, http::StatusCode};
 use wasm_bindgen::JsValue;
 use worker::D1Database;
 
 use crate::backend::{
-    errors::database_query_error::DatabaseQueryError,
+    errors::{database_query_error::DatabaseQueryError, application_error::ApplicationError},
     repositories::card_repository::CardRepository,
     types::player::{Player, UpdatePlayerDTO},
 };
@@ -57,8 +57,8 @@ impl PlayerRepository {
     ///
     /// If the database query fails, it returns a `DatabaseQueryError` containing the error
     /// details.
-    pub async fn add_player(&self, player: Player) -> Result<Player, DatabaseQueryError<Player>> {
-        let added_player = self
+    pub async fn add_player(&self, player: Player) -> Result<Player, Box<dyn ApplicationError>> {
+        let added_player = match self
             .db
             .prepare(
                 "INSERT INTO players (id, name, game_id, joined_at)
@@ -70,24 +70,29 @@ impl PlayerRepository {
                 JsValue::from(player.game_id.clone()),
                 JsValue::from(player.joined_at.clone()),
             ])
-            .unwrap()
-            .first::<Player>(None)
-            .await;
+        {
+            Ok(saved_data) => saved_data.first::<Player>(None).await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Player>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match added_player {
             Ok(good_query_result) => match good_query_result {
                 Some(result_player) => Ok(result_player),
-                None => Err(DatabaseQueryError::new(
+                None => Err(Box::new(DatabaseQueryError::<Player>::new(
                     "Failed to add player to the database".to_string(),
                     Some(axum::Json(player)),
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                )),
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                ))),
             },
-            Err(e) => Err(DatabaseQueryError::new(
+            Err(e) => Err(Box::new(DatabaseQueryError::<Player>::new(
                 e.to_string(),
                 Some(axum::Json(player)),
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -95,7 +100,7 @@ impl PlayerRepository {
     ///
     /// # Arguments
     ///
-    /// * `player` - A reference to the `Player` instance containing updated information.
+    /// * `player_data` - A reference to the `Player` instance containing updated information.
     ///
     /// # Returns
     ///
@@ -108,8 +113,8 @@ impl PlayerRepository {
     /// details.
     pub async fn update_player(
         &self,
-        player: UpdatePlayerDTO,
-    ) -> Result<Player, DatabaseQueryError<UpdatePlayerDTO>> {
+        player_data: UpdatePlayerDTO,
+    ) -> Result<Player, Box<dyn ApplicationError>> {
         // Prepare the SQL statement to update the player
         // Note: The SQL statement uses positional parameters (1?, 2?, etc.) for binding values.
         // This is a common practice to prevent SQL injection attacks.
@@ -117,30 +122,35 @@ impl PlayerRepository {
         // get the bindings for the SQL statement
         // get the query string depending on what new data was provided
 
-        let (query, bindings) = self.get_update_query_string_and_bindings(&player);
+        let (query, bindings) = self.get_update_query_string_and_bindings(&player_data);
 
-        let updated_player = self
+        let updated_player = match self
             .db
             .prepare(&query)
             .bind(&bindings)
-            .unwrap()
-            .first::<Player>(None)
-            .await;
+        {
+            Ok(modified_data) => modified_data.first::<Player>(None).await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<UpdatePlayerDTO>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match updated_player {
             Ok(good_query_result) => match good_query_result {
                 Some(result_player) => Ok(result_player),
-                None => Err(DatabaseQueryError::new(
+                None => Err(Box::new(DatabaseQueryError::<UpdatePlayerDTO>::new(
                     "Failed to update player in the database".to_string(),
-                    Some(axum::Json(player)),
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                )),
+                    Some(Json(player_data)),
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                ))),
             },
-            Err(e) => Err(DatabaseQueryError::new(
+            Err(e) => Err(Box::new(DatabaseQueryError::<UpdatePlayerDTO>::new(
                 e.to_string(),
-                Some(axum::Json(player)),
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+                Some(Json(player_data)),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))),
         }
     }
 
@@ -202,22 +212,27 @@ impl PlayerRepository {
     ///
     /// If the database query fails, it returns a `DatabaseQueryError` containing the error
     /// details.
-    pub async fn delete_player(&self, player_id: &str) -> Result<(), DatabaseQueryError<Player>> {
-        let deleted_player = self
+    pub async fn delete_player(&self, player_id: &str) -> Result<(), Box<dyn ApplicationError>> {
+        let deleted_player = match self
             .db
             .prepare("DELETE FROM players WHERE id = ?;")
             .bind(&[JsValue::from(player_id)])
-            .unwrap()
-            .run()
-            .await;
+        {
+            Ok(removed_data) => removed_data.run().await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Player>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match deleted_player {
             Ok(_) => Ok(()),
-            Err(e) => Err(DatabaseQueryError::new(
+            Err(e) => Err(Box::new(DatabaseQueryError::<Player>::new(
                 e.to_string(),
                 None,
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -232,29 +247,34 @@ impl PlayerRepository {
     /// A `Result` containing the retrieved `Player` instance on success, or a `DatabaseQueryError`
     /// on failure.
     ///
-    pub async fn get_player(&self, player_id: &str) -> Result<Player, DatabaseQueryError<Player>> {
-        let player = self
+    pub async fn get_player(&self, player_id: &str) -> Result<Player, Box<dyn ApplicationError>> {
+        let player = match self
             .db
             .prepare("SELECT * FROM players WHERE id = ?;")
             .bind(&[JsValue::from(player_id)])
-            .unwrap()
-            .first::<Player>(None)
-            .await;
+        {
+            Ok(fetched_data) => fetched_data.first::<Player>(None).await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Player>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match player {
             Ok(good_query_result) => match good_query_result {
                 Some(result_player) => Ok(result_player),
-                None => Err(DatabaseQueryError::new(
+                None => Err(Box::new(DatabaseQueryError::<Player>::new(
                     "Player not found".to_string(),
                     None,
-                    axum::http::StatusCode::NOT_FOUND,
-                )),
+                    StatusCode::NOT_FOUND,
+                ))),
             },
-            Err(e) => Err(DatabaseQueryError::new(
+            Err(e) => Err(Box::new(DatabaseQueryError::<Player>::new(
                 e.to_string(),
                 None,
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))),
         }
     }
 
@@ -274,25 +294,35 @@ impl PlayerRepository {
         &self,
         game_id: Option<&str>,
         card_repository: &CardRepository,
-    ) -> Result<Vec<Player>, DatabaseQueryError<Player>> {
+    ) -> Result<Vec<Player>, Box<dyn ApplicationError>> {
         // depending on if a game id was passed to the function -> filter for the players of a
         // game
         let query_result = match game_id {
             None => {
-                self.db
+                match self.db
                     .prepare("SELECT * FROM players;")
                     .bind(&[])
-                    .unwrap()
-                    .all()
-                    .await
+                    {
+                        Ok(fetched_data) => fetched_data.all().await,
+                        Err(err) => return Err(Box::new(DatabaseQueryError::<Player>::new(
+                            err.to_string(),
+                            None,
+                            StatusCode::INTERNAL_SERVER_ERROR
+                        )))
+                    }
             }
             Some(_game_id) => {
-                self.db
+                match self.db
                     .prepare("SELECT * FROM players WHERE game_id = ?;")
                     .bind(&[JsValue::from(_game_id)])
-                    .unwrap()
-                    .all()
-                    .await
+                    {
+                        Ok(fetched_data) => fetched_data.all().await,
+                        Err(err) => return Err(Box::new(DatabaseQueryError::<Player>::new(
+                            err.to_string(),
+                            None,
+                            StatusCode::INTERNAL_SERVER_ERROR
+                        )))
+                    }
             }
         };
         match query_result {
@@ -300,11 +330,11 @@ impl PlayerRepository {
                 let mut players: Vec<Player> = match collect_players.results::<Player>() {
                     Ok(results) => results,
                     Err(e) => {
-                        return Err(DatabaseQueryError::new(
+                        return Err(Box::new(DatabaseQueryError::<Player>::new(
                             e.to_string(),
                             None,
-                            axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                        ));
+                            StatusCode::INTERNAL_SERVER_ERROR,
+                        )));
                     }
                 };
                 // for each player, fetch their assigned cards
@@ -315,30 +345,30 @@ impl PlayerRepository {
                     {
                         Ok(cards) => cards,
                         Err(err) => {
-                            return Err(DatabaseQueryError::new(
+                            return Err(Box::new(DatabaseQueryError::<Player>::new(
                                 err.to_string(),
                                 Some(Json(player.clone())),
-                                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                            ));
+                                StatusCode::INTERNAL_SERVER_ERROR,
+                            )));
                         }
                     };
                 }
 
                 if players.is_empty() {
-                    Err(DatabaseQueryError::new(
+                    Err(Box::new(DatabaseQueryError::<Player>::new(
                         "No players found".to_string(),
                         None,
-                        axum::http::StatusCode::NOT_FOUND,
-                    ))
+                        StatusCode::NOT_FOUND,
+                    )))
                 } else {
                     Ok(players)
                 }
             }
-            Err(e) => Err(DatabaseQueryError::new(
+            Err(e) => Err(Box::new(DatabaseQueryError::<Player>::new(
                 e.to_string(),
                 None,
-                axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+                StatusCode::INTERNAL_SERVER_ERROR,
+            ))),
         }
     }
 }

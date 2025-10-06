@@ -7,7 +7,6 @@ cfg_if! {
         use axum::http::StatusCode;
         use axum::response::IntoResponse;
         use crate::backend::utils::game_service::select_new_card_to_be_played;
-
     }
 }
 
@@ -32,7 +31,7 @@ const MAX_PLAYERS: usize = 5;
 ///
 /// Holds information about the state of the game, such as players, scores, and other relevant
 /// details.
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Clone)]
 pub struct Game {
     /// Unique identifier for the game instance.
     pub id: String,
@@ -114,7 +113,7 @@ impl Game {
             card_to_play: game.card_to_play.clone(),
             chat: game.chat.clone(),
             claims: game.claims.clone(),
-            round_number: game.round_number.clone(),
+            round_number: game.round_number,
         }
     }
 

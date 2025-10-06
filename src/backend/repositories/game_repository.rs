@@ -65,11 +65,11 @@ impl GameRepository {
                     VALUES (1?, 2?, 3?, 4?, 5?, 6?) RETURNING *;",
             )
             .bind(&[
-                JsValue::from(game.id),
-                JsValue::from(game.started_at),
+                JsValue::from(game.id.clone()),
+                JsValue::from(game.started_at.clone()),
                 JsValue::from(game.round_number),
                 JsValue::from(game.state.index()),
-                JsValue::from(game.which_player_turn),
+                JsValue::from(game.which_player_turn.clone()),
                 JsValue::from(game.card_to_play.index()),
             ])
             {
@@ -322,7 +322,7 @@ impl GameRepository {
             .bind(&[JsValue::from(game_id)])
         {
             Ok(temporary_data) => temporary_data.run().await,
-            Err(err) => return Err(Box::new(DatabaseQueryError::new(
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Game>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR
