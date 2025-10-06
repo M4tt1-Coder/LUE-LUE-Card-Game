@@ -55,7 +55,7 @@ impl ChatMessageRepository {
     pub async fn delete_all_messages_in_chat(
         &self,
         chat_id: &str,
-    ) -> Result<(), DatabaseQueryError<ChatMessage>> {
+    ) -> Result<(), Box<dyn ApplicationError>> {
         let query_result = self
             .db
             .prepare("DELETE FROM chat_messages WHERE chat_id = ?;")
@@ -66,11 +66,11 @@ impl ChatMessageRepository {
 
         match query_result {
             Ok(_) => Ok(()),
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -179,7 +179,7 @@ impl ChatMessageRepository {
     pub async fn get_all_messages_in_chat(
         &self,
         chat_id: &str,
-    ) -> Result<Vec<ChatMessage>, DatabaseQueryError<ChatMessage>> {
+    ) -> Result<Vec<ChatMessage>, Box<dyn ApplicationError>> {
         let query = "SELECT * FROM chat_messages WHERE chat_id = ? ORDER BY created_at ASC;";
         let params = vec![JsValue::from(chat_id)];
 
@@ -190,20 +190,20 @@ impl ChatMessageRepository {
                 let messages = match fetched_messages.results::<ChatMessage>() {
                     Ok(msgs) => msgs,
                     Err(err) => {
-                        return Err(DatabaseQueryError::new(
+                        return Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                             err.to_string(),
                             None,
                             StatusCode::INTERNAL_SERVER_ERROR,
-                        ));
+                        )));
                     }
                 };
                 Ok(messages)
             }
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -229,7 +229,7 @@ impl ChatMessageRepository {
     pub async fn get_message_by_id(
         &self,
         message_id: &str,
-    ) -> Result<ChatMessage, DatabaseQueryError<ChatMessage>> {
+    ) -> Result<ChatMessage, Box<dyn ApplicationError>> {
         let query_result = match self
             .db
             .prepare("SELECT * FROM chat_messages WHERE id = ?;")
@@ -237,31 +237,31 @@ impl ChatMessageRepository {
         {
             Ok(prepared) => prepared.first::<ChatMessage>(None).await,
             Err(err) => {
-                return Err(DatabaseQueryError::new(
+                return Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                     err.to_string(),
                     None,
                     StatusCode::INTERNAL_SERVER_ERROR,
-                ));
+                )));
             }
         };
 
         match query_result {
             Ok(fetched_message) => match fetched_message {
                 Some(message) => Ok(message),
-                None => Err(DatabaseQueryError::new(
+                None => Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                     format!(
                         "The chat message with the id ['{}'] couldn't be found!",
                         message_id
                     ),
                     None,
                     StatusCode::NOT_FOUND,
-                )),
+                ))),
             },
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -278,7 +278,7 @@ impl ChatMessageRepository {
     pub async fn save_message(
         &self,
         message: &ChatMessage,
-    ) -> Result<ChatMessage, DatabaseQueryError<ChatMessage>> {
+    ) -> Result<ChatMessage, Box<dyn ApplicationError>> {
         let query_result = match self.db.prepare("INSERT INTO chat_messages (id, player_id, content, sent_at, chat_id) VALUES (1?, 2?, 3?, 4?, 5?) RETURNING *;")
             .bind(&[
                 JsValue::from(&message.id),
@@ -289,31 +289,31 @@ impl ChatMessageRepository {
             ]) {
             Ok(prepared) => prepared.first::<ChatMessage>(None).await,
             Err(err) => {
-                return Err(DatabaseQueryError::new(
+                return Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                     err.to_string(),
                     None,
                     StatusCode::INTERNAL_SERVER_ERROR,
-                ));
+                )));
             }
         };
 
         match query_result {
             Ok(returned_message) => match returned_message {
                 Some(message) => Ok(message),
-                None => Err(DatabaseQueryError::new(
+                None => Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                     format!(
                         "Failed to add the chat message with ID ['{}'] to the database!",
                         message.id
                     ),
                     None,
                     StatusCode::INTERNAL_SERVER_ERROR,
-                )),
+                ))),
             },
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<ChatMessage>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 }

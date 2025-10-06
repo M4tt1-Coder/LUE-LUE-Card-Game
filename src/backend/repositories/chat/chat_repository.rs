@@ -181,7 +181,7 @@ impl ChatRepository {
         let chat_message_insertion_result = match chat_message_repo.save_message(&chat_message).await {
             Ok(message) => message,
             Err(err) => {
-                return Err(Box::new(err))
+                return Err(err)
             }
         };
 
@@ -387,7 +387,7 @@ impl ChatRepository {
                     chat.messages = match chat_message_repo.get_all_messages_in_chat(&chat.id).await {
                         Ok(messages) => messages,
                         Err(error) => {
-                            return Err(Box::new(error));
+                            return Err(error);
                         }
                     };
 

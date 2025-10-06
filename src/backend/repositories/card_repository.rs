@@ -8,7 +8,7 @@ use wasm_bindgen::JsValue;
 use worker::D1Database;
 
 use crate::backend::{
-    errors::{database_query_error::DatabaseQueryError, process_error::ProcessError},
+    errors::{database_query_error::DatabaseQueryError, process_error::ProcessError, application_error::ApplicationError},
     types::card::{Card, UpdateCardDTO},
 };
 
@@ -48,13 +48,13 @@ impl CardRepository {
         &self,
         claim_id: Option<String>,
         player_id: Option<String>,
-    ) -> Result<Vec<Card>, DatabaseQueryError<Card>> {
+    ) -> Result<Vec<Card>, Box<dyn ApplicationError>> {
         if claim_id.is_some() && player_id.is_some() {
-            return Err(DatabaseQueryError::new(
+            return Err(Box::new(DatabaseQueryError::<Card>::new(
                 "Either claim_id or player_id must be provided, but not both.".to_string(),
                 None,
                 StatusCode::BAD_REQUEST,
-            ));
+            )));
         }
 
         let mut query = "SELECT * FROM cards".to_string();
@@ -77,21 +77,21 @@ impl CardRepository {
                 let output_cards: Vec<Card> = match fetched_cards.results::<Card>() {
                     Ok(cards) => cards,
                     Err(err) => {
-                        return Err(DatabaseQueryError::new(
+                        return Err(Box::new(DatabaseQueryError::<Card>::new(
                             err.to_string(),
                             None,
                             StatusCode::INTERNAL_SERVER_ERROR,
-                        ));
+                        )));
                     }
                 };
 
                 Ok(output_cards)
             }
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Card>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -102,32 +102,38 @@ impl CardRepository {
     /// - `id` -> Identifier of the `Card` object.
     ///
     /// # Returns a `Card` instance if found, or an error if not found or if the query fails.
-    pub async fn get_card_by_id(&self, id: String) -> Result<Card, DatabaseQueryError<Card>> {
+    pub async fn get_card_by_id(&self, id: String) -> Result<Card, Box<dyn ApplicationError>> {
         let query = "SELECT * FROM cards WHERE id = ?;";
         let params = vec![JsValue::from(id)];
 
-        let query_result = self
+        let query_result = match self
             .db
             .prepare(query)
             .bind(&params)
-            .unwrap()
-            .first::<Card>(None)
-            .await;
+                    {
+            Ok(recv_cards) => recv_cards.first::<Card>(None).await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Card>::new(
+                        err.to_string(),
+                        None,
+                        StatusCode::INTERNAL_SERVER_ERROR
+                    )))
+                };
+
 
         match query_result {
             Ok(fetched_card) => match fetched_card {
                 Some(card) => Ok(card),
-                None => Err(DatabaseQueryError::new(
+                None => Err(Box::new(DatabaseQueryError::<Card>::new(
                     "Card not found".to_string(),
                     None,
                     StatusCode::NOT_FOUND,
-                )),
+                ))),
             },
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Card>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -138,19 +144,26 @@ impl CardRepository {
     /// - `id` -> Identifier of the `Card` object to be deleted.
     ///
     /// # Returns `Ok(())` if the deletion was successful, or an error if the query fails.
-    pub async fn delete_card(&self, id: String) -> Result<(), DatabaseQueryError<Card>> {
+    pub async fn delete_card(&self, id: String) -> Result<(), Box<dyn ApplicationError>> {
         let query = "DELETE FROM cards WHERE id = ?;";
         let params = vec![JsValue::from(id)];
 
-        let query_result = self.db.prepare(query).bind(&params).unwrap().run().await;
+        let query_result = match self.db.prepare(query).bind(&params) {
+            Ok(recv_data) => recv_data.run().await,
+            Err(err) => return Err(Box::new(DatabaseQueryError::<Card>::new(
+                err.to_string(),
+                None,
+                StatusCode::INTERNAL_SERVER_ERROR
+            )))
+        };
 
         match query_result {
             Ok(_) => Ok(()),
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Card>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -166,7 +179,7 @@ impl CardRepository {
         &self,
         card: Card,
         player_id: String,
-    ) -> Result<Card, DatabaseQueryError<Card>> {
+    ) -> Result<Card, Box<dyn ApplicationError>> {
         let query = "INSERT INTO cards (id, card_type, player_id) VALUES (1?, 2?, 3?) RETURN *;";
         let params = vec![
             JsValue::from(card.id.clone()),
@@ -174,28 +187,33 @@ impl CardRepository {
             JsValue::from(player_id),
         ];
 
-        let query_result = self
+        let query_result = match self
             .db
             .prepare(query)
             .bind(&params)
-            .unwrap()
-            .first::<Card>(None)
-            .await;
+            {
+                Ok(recv_data) => recv_data.first::<Card>(None).await,
+                Err(err) => return Err(Box::new(DatabaseQueryError::<Card>::new(
+                    err.to_string(),
+                    None,
+                    StatusCode::INTERNAL_SERVER_ERROR
+                )))
+            };
 
         match query_result {
             Ok(card_result) => match card_result {
                 Some(created_card) => Ok(created_card),
-                None => Err(DatabaseQueryError::new(
+                None => Err(Box::new(DatabaseQueryError::<Card>::new(
                     "Failed to create card".to_string(),
                     Some(Json(card)),
                     StatusCode::INTERNAL_SERVER_ERROR,
-                )),
+                ))),
             },
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Card>::new(
                 err.to_string(),
                 Some(Json(card)),
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -209,40 +227,45 @@ impl CardRepository {
     pub async fn update_card(
         &self,
         card_data: UpdateCardDTO,
-    ) -> Result<Card, DatabaseQueryError<Card>> {
+    ) -> Result<Card, Box<dyn ApplicationError>> {
         let (query, params) = match self.determine_query_and_bindings_to_update_card(&card_data) {
             Ok(result) => result,
             Err(err) => {
-                return Err(DatabaseQueryError::new(
+                return Err(Box::new(DatabaseQueryError::<Card>::new(
                     err.to_string(),
                     Some(Json(card_data.as_card())),
                     StatusCode::BAD_REQUEST,
-                ))
+                )))
             }
         };
 
-        let query_result = self
+        let query_result = match self
             .db
             .prepare(&query)
             .bind(&params)
-            .unwrap()
-            .first::<Card>(None)
-            .await;
+            {
+                Ok(recv_data) => recv_data.first::<Card>(None).await,
+                Err(err) => return Err(Box::new(DatabaseQueryError::<Card>::new(
+                    err.to_string(),
+                    None,
+                    StatusCode::INTERNAL_SERVER_ERROR
+                    )))
+            };
 
         match query_result {
             Ok(updated_card) => match updated_card {
                 Some(card) => Ok(card),
-                None => Err(DatabaseQueryError::new(
+                None => Err(Box::new(DatabaseQueryError::<Card>::new(
                     "Card not found and couldn't be updated!".to_string(),
                     None,
                     StatusCode::NOT_FOUND,
-                )),
+                ))),
             },
-            Err(err) => Err(DatabaseQueryError::new(
+            Err(err) => Err(Box::new(DatabaseQueryError::<Card>::new(
                 err.to_string(),
                 None,
                 StatusCode::INTERNAL_SERVER_ERROR,
-            )),
+            ))),
         }
     }
 
@@ -259,16 +282,16 @@ impl CardRepository {
     fn determine_query_and_bindings_to_update_card(
         &self,
         card_data: &UpdateCardDTO,
-    ) -> Result<(String, Vec<JsValue>), ProcessError<UpdateCardDTO>> {
+    ) -> Result<(String, Vec<JsValue>), Box<dyn ApplicationError>> {
         if card_data.player_id.is_none()
             && card_data.claim_id.is_none()
             && card_data.card_type.is_none()
         {
-            return Err(ProcessError::new(
+            return Err(Box::new(ProcessError::<UpdateCardDTO>::new(
                 "No new data was provided! The modifying attempt was aborted!".to_string(),
                 "CardRepository::update_card".to_string(),
                 Some(card_data.clone()),
-            ));
+            )));
         }
 
         let mut query = "UPDATE cards SET ".to_string();

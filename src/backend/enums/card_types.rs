@@ -94,7 +94,7 @@ impl CardType {
         // make sure a valid number in the prefered range is used
         let used_num = num % Self::number_of_values();
 
-        return match used_num {
+        match used_num {
             0 => CardType::King,
             1 => CardType::Queen,
             2 => CardType::Jack,
@@ -105,7 +105,7 @@ impl CardType {
 
                 CardType::King
             }
-        };
+        }
     }
 }
 

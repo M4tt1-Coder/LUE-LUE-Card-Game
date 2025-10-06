@@ -1,3 +1,5 @@
+// TODO: Annotate all code with the 'ssr' / 'hydrate' feature BUT not with cfg!()
+
 // TODO: Read the book for leptos -> https://book.leptos.dev/
 // TODO: Watch Axum tutoial -> https://www.youtube.com/watch?v=XZtlD_m59sM
 
@@ -28,9 +30,7 @@ async fn fetch(
     use std::env;
     use std::sync::Arc;
     use tower_service::Service;
-    use worker::*;
-
-    // console_error_panic_hook::set_once();
+    // use worker::*;
 
     // TODO: Try to important all options from .env
     // Define the leptos options
