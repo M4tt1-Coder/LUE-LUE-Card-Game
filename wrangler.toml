@@ -1,14 +1,14 @@
 name = "lue-lue-game"
-main = "build/worker/shim.mjs"
+main = "build/index.js"
 compatibility_date = "2025-09-21"
 
 [assets]
 binding = "ASSETS"
-directory = "./public/"
+directory = "./target/site"
 
 [build]
-# command = "cargo leptos build --release && LEPTOS_OUTPUT_NAME=lue_lue_game worker-build --release --features ssr"
-command = "cargo install -q worker-build && worker-build --release --features ssr"
+# command = "cargo install -q worker-build && worker-build --release --features ssr"
+command = "cargo leptos build --release && cargo install -q worker-build && LEPTOS_OUTPUT_NAME=lue-lue-game worker-build --release --features ssr"
 
 [[d1_databases]]
 binding = "DB"

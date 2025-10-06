@@ -2,7 +2,6 @@ use cfg_if::cfg_if;
 
 cfg_if! {
     if #[cfg(feature = "ssr")] {
-        // TODO: Rework all methods / functions to return a error object that implements the 'ApplicationError' trait
         use std::{error, fmt};
 
         use axum::response::IntoResponse;

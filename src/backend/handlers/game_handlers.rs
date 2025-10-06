@@ -1,4 +1,5 @@
-// TODO: Set up all necessary handler functions regarding serving  with the game instance
+// TODO: Implement the 'Game' endpoint functions
+
 use cfg_if::cfg_if;
 
 cfg_if! {

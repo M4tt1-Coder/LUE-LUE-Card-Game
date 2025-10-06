@@ -1,5 +1,3 @@
-// TODO: Annotate all code with the 'ssr' / 'hydrate' feature BUT not with cfg!()
-
 // TODO: Read the book for leptos -> https://book.leptos.dev/
 // TODO: Watch Axum tutoial -> https://www.youtube.com/watch?v=XZtlD_m59sM
 
