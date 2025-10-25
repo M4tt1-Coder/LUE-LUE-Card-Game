@@ -7,12 +7,12 @@ cfg_if! {
 
     use leptos::*;
 
-    use axum::routing::{put, post};
+    use axum::routing::{post};
     use axum::Router;
     use axum::Extension;
     use leptos_axum::{generate_route_list, LeptosRoutes};
 
-    use crate::backend::handlers::game_handlers::update_game;
+    use crate::backend::handlers::game_handlers::post_game;
     use crate::app::*;
     use worker::Env;
     use leptos::prelude::LeptosOptions;
@@ -47,7 +47,7 @@ cfg_if! {
         Router::new()
         // Register all necessary endpoints
         // game instance endpoints
-        .route("/api/game/update", put(update_game))
+        .route("/api/game/add", post(post_game))
         .leptos_routes(&leptos_options, routes,{
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())

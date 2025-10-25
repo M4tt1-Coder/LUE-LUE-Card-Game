@@ -1,4 +1,7 @@
-use leptos::{logging::log, prelude::*};
+use leptos::{
+    logging::{self, log},
+    prelude::*,
+};
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
 use leptos_router::{
     components::{Route, Router, Routes},
@@ -51,14 +54,16 @@ pub fn App() -> impl IntoView {
 #[component]
 fn HomePage() -> impl IntoView {
     // Creates a reactive value to update the button
-    let count = RwSignal::new(0);
-    let on_click = move |_| {
-        log!("Something wasnt working!");
-        *count.write() += 1
-    };
+    let (counter, set_counter) = signal(0);
+    let on_click = move |_| *set_counter.write() += 1;
+
+    Effect::new(move |_| {
+        // immediately prints "Value: 0" and subscribes to `a`
+        logging::log!("Value: {}", counter.get());
+    });
 
     view! {
         <h1>"Welcome to Leptos!"</h1>
-        <button on:click=on_click>"Click Me: " {count}</button>
+        <button on:click=on_click>"Click Me: " {counter.get()}</button>
     }
 }

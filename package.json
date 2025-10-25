@@ -10,8 +10,8 @@
   "keywords": [],
   "author": "Matthis Geißler",
   "license": "MIT",
-  "packageManager": "pnpm@10.18.0",
+  "packageManager": "pnpm@10.19.0",
   "dependencies": {
-    "tailwindcss": "^4.1.14"
+    "tailwindcss": "^4.1.16"
   }
 }

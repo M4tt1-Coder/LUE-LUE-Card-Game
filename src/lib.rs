@@ -1,5 +1,4 @@
 // TODO: Read the book for leptos -> https://book.leptos.dev/
-// TODO: Watch Axum tutoial -> https://www.youtube.com/watch?v=XZtlD_m59sM
 
 // https://github.com/cloudflare/workers-rs/tree/main/templates/leptos
 // https://github.com/bakcxoj/leptos-workers
@@ -7,6 +6,7 @@
 
 mod app;
 mod backend;
+mod tests;
 mod ui;
 
 use leptos::*;
