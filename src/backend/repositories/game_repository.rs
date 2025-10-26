@@ -57,7 +57,12 @@ impl GameRepository {
     /// # Returns
     ///
     /// A `Result` indicating success or failure of the operation.
+    #[worker::send]
     pub async fn add_game(&self, game: Game) -> Result<Game, Box<dyn ApplicationError>> {
+        self.add_game_inner(game).await
+    }
+
+    async fn add_game_inner(&self, game: Game) -> Result<Game, Box<dyn ApplicationError>> {
         let added_game = match self
             .db
             .prepare(

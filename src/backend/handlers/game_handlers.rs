@@ -20,9 +20,8 @@ use std::sync::Arc;
 // TODO: First try to implement the 'post_game' function -> access the database and insert a new
 // game instance
 
-// TODO: Try leptos server function -> register it in the router provider
-
-pub async fn post_game(Json(body_data): Json<Game>, worker_env: Extension<Arc<Env>>) -> Result<Json<Game>, StatusCode> {
+#[axum::debug_handler]
+pub async fn post_game(Extension(worker_env): Extension<Arc<Env>>, Json(body_data): Json<Game>) -> Result<Json<Game>, StatusCode> {
     // extract a new 'Game' object from the payload
 
     // get a database instance
@@ -38,10 +37,6 @@ pub async fn post_game(Json(body_data): Json<Game>, worker_env: Extension<Arc<En
         Err(_) => Err(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }
-
-// #[server]
-// pub async fn post_game() -> Result<Game, ServerFnError> {
-
 
     }
 }
