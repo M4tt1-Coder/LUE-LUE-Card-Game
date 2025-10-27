@@ -1,6 +1,6 @@
 use std::fmt;
 
-use log::warn;
+use leptos::logging::warn;
 use serde::{Deserialize, Serialize};
 
 /// Card types for a card game.

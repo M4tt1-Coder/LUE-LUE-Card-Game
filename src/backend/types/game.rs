@@ -62,6 +62,10 @@ impl Default for Game {
     }
 }
 
+// ----- Implementation of the 'Game' struct -----
+
+// TODO: Implement 'from_dto_...' functions to create a Game instance from DTOs
+
 impl Game {
     /// Creates a new instance of the `Game` struct with a unique ID and default values.
     ///

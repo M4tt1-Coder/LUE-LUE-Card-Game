@@ -15,7 +15,7 @@ use crate::backend::{
 };
 use axum::{http::StatusCode, Json};
 use wasm_bindgen::JsValue;
-use worker::D1Database;
+use worker::{ D1Database, console_debug };
 
 /// Represents a repository for managing game data in the D1 database.
 ///
@@ -63,11 +63,12 @@ impl GameRepository {
     }
 
     async fn add_game_inner(&self, game: Game) -> Result<Game, Box<dyn ApplicationError>> {
+        console_debug!("Adding a new game to the database! {}", game);
         let added_game = match self
             .db
             .prepare(
-                "INSERT INTO games (id, started_at, round_number, state, which_players_turn, card_to_play)
-                    VALUES (1?, 2?, 3?, 4?, 5?, 6?) RETURNING *;",
+                "INSERT INTO games (id, started_at, round_number, state, which_player_turn, card_to_play)
+                    VALUES (?, ?, ?, ?, ?, ?) RETURNING *;",
             )
             .bind(&[
                 JsValue::from(game.id.clone()),

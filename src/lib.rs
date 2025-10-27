@@ -24,7 +24,6 @@ async fn fetch(
     use crate::app::App;
     use crate::backend::router::router_provider;
     use leptos::config::LeptosOptions;
-    use log::debug;
     use std::env;
     use std::sync::Arc;
     use tower_service::Service;
@@ -52,13 +51,7 @@ async fn fetch(
     // register leptos server functions
     // TODO: Register leptos functions later
 
-    // Get the database binding -> access to D1 database
-    // let database = env.d1("DB").map_err(|err| {
-    //     warn!("{err}");
-    //     worker::Error::RustError("DB binding not found".to_string())
-    // })?;
-
-    debug!("Server is running on port http://localhost:3000/");
+    console_debug!("Server is running on port http://localhost:3000/");
     Ok(router_provider::router(
         env,
         leptos_options_builder
