@@ -83,12 +83,13 @@ impl Game {
     /// ```
     pub fn new() -> Self {
         let game_id = Uuid::new_v4().to_string();
-
+        let temp_which_player_turn = format!("temp_{}", Uuid::new_v4());
         Game {
             id: game_id.clone(),
             players: vec![],
-            which_player_turn: String::new(),
-            state: GameState::Starting, // Placeholder for actual game state
+            which_player_turn: temp_which_player_turn, // is a temporary value -> will be set when
+            // the first player joins
+            state: GameState::InProgress, // Placeholder for actual game state
             started_at: chrono::Utc::now().to_string(),
             card_to_play: CardType::King,
             chat: Chat::new(game_id),
@@ -148,6 +149,36 @@ impl Game {
         self.round_number += 1;
 
         Ok(())
+    }
+
+    /// Creates a new instance of a `Game` struct from a `TempGameQueryDTO` reference.
+    ///
+    /// All data is cloned!
+    ///
+    /// # Example
+    /// ```rust
+    ///     let dto = TempGameQueryDTO::new(
+    ///         "game_id".to_string(),
+    ///         "player_1".to_string(),
+    ///         1,
+    ///         "2024-10-10T10:00:00Z".to_string(),
+    ///         2,
+    ///         3,
+    ///     );
+    ///     let game = Game::from_query_dto(&dto);
+    /// ```
+    pub fn from_query_dto(dto: &TempGameQueryDTO) -> Self {
+        Game {
+            id: dto.id.clone(),
+            players: vec![],
+            which_player_turn: dto.which_player_turn.clone(),
+            state: GameState::from_index(dto.state),
+            started_at: dto.started_at.clone(),
+            card_to_play: CardType::from_usize(dto.card_to_play),
+            chat: Chat::new(dto.id.clone()),
+            claims: vec![],
+            round_number: dto.round_number,
+        }
     }
     }}
 }
@@ -295,5 +326,75 @@ impl Display for UpdateGameDTO {
 
 
 impl<'a> ErrorObject<'a> for UpdateGameDTO {}
+
+// ----- Implementation of the 'TempGameQueryDTO' struct -----
+
+/// Temporary DTO type for querying a Game instance.
+///
+/// Used for querying a Game instance with basic properties.
+///
+/// # Props
+/// - `id` -> Identifier of a Game instance
+/// - `which_player_turn` -> Id of the player whose turn it is
+/// - `state` -> Current state of the Game instance
+/// - `started_at` -> Timestamp when the Game instance was created
+/// - `round_number` -> Current round number of the Game instance
+/// - `card_to_play` -> Card that needs to be played in the current round
+#[derive(Deserialize, Serialize, Debug, Clone)]
+pub struct TempGameQueryDTO {
+    /// Identifier of the Game instance.
+    pub id: String,
+    /// Id of the player whose turn it is.
+    pub which_player_turn: String,
+    /// Current state of the Game instance.
+    pub state: usize,
+    /// Timestamp when the Game instance was created.
+    pub started_at: String,
+    /// Current round number of the Game instance.
+    pub round_number: usize,
+    /// Card that needs to be played in the current round.
+    pub card_to_play: usize,
+}
+
+impl Display for TempGameQueryDTO {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(
+            f,
+            "Id: {}, Which Player Turn: {}, State: {}, Started At: {}, Round Number: {}, Card to Play: {}",
+            self.id,
+            self.which_player_turn,
+            self.state,
+            self.started_at,
+            self.round_number,
+            self.card_to_play
+        )
+    }
+}
+
+impl <'a> ErrorObject<'a> for TempGameQueryDTO {}
+
+impl TempGameQueryDTO {
+    /// Creates a new instance of the `TempGameQueryDTO` struct.
+    ///
+    /// # Returns
+    /// A new `TempGameQueryDTO` instance with the provided values.
+    pub fn new(
+        id: String,
+        which_player_turn: String,
+        state: usize,
+        started_at: String,
+        round_number: usize,
+        card_to_play: usize,
+    ) -> Self {
+        TempGameQueryDTO {
+            id,
+            which_player_turn,
+            state,
+            started_at,
+            round_number,
+            card_to_play,
+        }
+    }
+}
     }
 }

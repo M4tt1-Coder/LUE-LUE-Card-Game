@@ -9,7 +9,7 @@ use crate::backend::{
     types::{
         chat::{Chat, ChatMessage},
         claim::Claim,
-        game::{Game, UpdateGameDTO},
+        game::{Game, UpdateGameDTO, TempGameQueryDTO},
         player::Player,
     },
 };
@@ -64,7 +64,7 @@ impl GameRepository {
 
     async fn add_game_inner(&self, game: Game) -> Result<Game, Box<dyn ApplicationError>> {
         console_debug!("Adding a new game to the database! {}", game);
-        let added_game = match self
+        let added_game_res = match self
             .db
             .prepare(
                 "INSERT INTO games (id, started_at, round_number, state, which_player_turn, card_to_play)
@@ -79,17 +79,17 @@ impl GameRepository {
                 JsValue::from(game.card_to_play.index()),
             ])
             {
-                Ok(inserted_data) => inserted_data.first::<Game>(None).await,
-                Err(err) => return Err(Box::new(DatabaseQueryError::<Game>::new(
+                Ok(inserted_data) => inserted_data.first::<TempGameQueryDTO>(None).await,
+                Err(err) => return Err(Box::new(DatabaseQueryError::<TempGameQueryDTO>::new(
                     err.to_string(),
                     None,
                     StatusCode::INTERNAL_SERVER_ERROR
                 )))
             };
 
-        match added_game {
-            Ok(game_data) => match game_data {
-                Some(created_game) => Ok(created_game),
+        match added_game_res {
+            Ok(query_data) => match query_data {
+                Some(created_game_data) => Ok(Game::from_query_dto(&created_game_data)),
                 None => Err(Box::new(DatabaseQueryError::<Game>::new(
                     "Failed to add game to the database".to_string(),
                     Some(Json(game.clone())),

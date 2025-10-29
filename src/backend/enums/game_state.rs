@@ -1,3 +1,4 @@
+use leptos::leptos_dom::logging::console_error;
 use serde::{Deserialize, Serialize};
 use std::fmt::{Debug, Display};
 
@@ -16,13 +17,13 @@ use std::fmt::{Debug, Display};
 #[derive(Deserialize, Serialize, Debug, Clone)]
 pub enum GameState {
     /// The game is currently in progress.
-    InProgress,
+    InProgress = 0,
     /// The game has ended.
-    Ended,
+    Ended = 1,
     /// The game is waiting for players to join.
-    WaitingForPlayers,
+    WaitingForPlayers = 2,
     /// The game is starting, preparing for the first turn.
-    Starting,
+    Starting = 3,
 }
 
 impl GameState {
@@ -65,6 +66,31 @@ impl GameState {
     /// Needs to be updated if the number of variants is modified!
     pub fn number_of_values() -> usize {
         4
+    }
+
+    /// Creates a `GameState` from a given index.
+    ///
+    /// # Arguments
+    ///
+    /// * `index` - A `usize` representing the index of the desired game state.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(GameState)` if the index corresponds to a valid game state.
+    /// * `None` if the index is out of range.
+    pub fn from_index(index: usize) -> GameState {
+        match index {
+            0 => GameState::InProgress,
+            1 => GameState::Ended,
+            2 => GameState::WaitingForPlayers,
+            3 => GameState::Starting,
+            _ => {
+                console_error(
+                    "Index out of range in GameState::from_index, defaulting to InProgress",
+                );
+                GameState::InProgress
+            }
+        }
     }
 }
 
