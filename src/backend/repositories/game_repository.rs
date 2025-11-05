@@ -25,12 +25,12 @@ use worker::{ D1Database, console_debug };
 /// # Properties
 ///
 /// `db`: An instance of `D1Database` that provides access to the D1 database.
-pub struct GameRepository {
+pub struct GameRepository<'a> {
     /// The D1 database instance used for accessing game data.
-    db: D1Database,
+    db: &'a D1Database,
 }
 
-impl GameRepository {
+impl<'a> GameRepository {
     /// Creates a new `GameRepository` instance with the provided D1 database.
     ///
     /// # Arguments
@@ -40,7 +40,7 @@ impl GameRepository {
     /// # Returns
     ///
     /// A new `GameRepository` instance.
-    pub fn new(db: D1Database) -> Self {
+    pub fn new(db: &'a D1Database) -> Self {
         GameRepository { db }
     }
 
@@ -181,7 +181,27 @@ impl GameRepository {
     ///
     /// A `Result` containing an `Game` struct object if the game is found, or a `DatabaseQueryError` if
     /// an error occurs.
+    #[worker::send]
     pub async fn get_game_by_id(
+        &self,
+        game_id: &str,
+        chat_repo: &ChatRepository,
+        player_repo: &PlayerRepository,
+        claim_repo: &ClaimsRepository,
+        chat_message_repo: &ChatMessageRepository,
+        card_repo: &CardRepository
+    ) -> Result<Game, Box<dyn ApplicationError>> {
+        self.get_game_by_id_inner(
+            game_id,
+            chat_repo,
+            player_repo,
+            claim_repo,
+            chat_message_repo,
+            card_repo
+        ).await
+    }
+
+    async fn get_game_by_id_inner(
         &self,
         game_id: &str,
         chat_repo: &ChatRepository,
@@ -233,6 +253,7 @@ impl GameRepository {
                 axum::http::StatusCode::INTERNAL_SERVER_ERROR,
             ))),
         }
+
     }
 
     /// Retrieves all games from the D1 database.

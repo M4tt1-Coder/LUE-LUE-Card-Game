@@ -3,9 +3,9 @@ cfg_if! {
     if #[cfg(feature = "ssr")] {
 
 
-use axum::{Json, http::StatusCode};
+use axum::{ Json, http::StatusCode };
 use wasm_bindgen::JsValue;
-use worker::D1Database;
+use worker::{ D1Database, D1Result };
 
 use crate::backend::{
     errors::{database_query_error::DatabaseQueryError, application_error::ApplicationError},
@@ -21,14 +21,14 @@ use crate::backend::{
 /// # Properties
 ///
 /// `db`: An instance of `D1Database` that provides access to the D1 database.
-pub struct PlayerRepository {
+pub struct PlayerRepository<'a> {
     /// The D1 database instance used for accessing player data.
-    db: D1Database,
+    db: &'a D1Database,
 }
 
 // ----- Implementation of 'PlayerRepository' -----
 
-impl PlayerRepository {
+impl<'a> PlayerRepository {
     /// Creates a new `PlayerRepository` instance with the provided D1 database.
     ///
     /// # Arguments
@@ -38,7 +38,7 @@ impl PlayerRepository {
     /// # Returns
     ///
     /// A new `PlayerRepository` instance.
-    pub fn new(db: D1Database) -> Self {
+    pub fn new(db: &'a D1Database) -> Self {
         PlayerRepository { db }
     }
 
@@ -290,14 +290,23 @@ impl PlayerRepository {
     ///
     /// A `Result` containing a vector of `Player` instances on success, or a `DatabaseQueryError`
     /// on failure.
+    #[worker::send]
     pub async fn get_all_players(
         &self,
         game_id: Option<&str>,
         card_repository: &CardRepository,
     ) -> Result<Vec<Player>, Box<dyn ApplicationError>> {
-        // depending on if a game id was passed to the function -> filter for the players of a
+        self.get_all_players_inner(game_id, card_repository).await
+    }
+
+    async fn get_all_players_inner(
+        &self,
+        game_id: Option<&str>,
+        card_repository: &CardRepository,
+    ) -> Result<Vec<Player>, Box<dyn ApplicationError>> {
+         // depending on if a game id was passed to the function -> filter for the players of a
         // game
-        let query_result = match game_id {
+        let query_result: Result<D1Result, E> = match game_id {
             None => {
                 match self.db
                     .prepare("SELECT * FROM players;")

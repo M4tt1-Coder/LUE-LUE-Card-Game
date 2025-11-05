@@ -1,7 +1,7 @@
 [package]
 name = "lue-lue-game"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 authors = [ "Matthis Geißler <matthisgeissler@gmail.com>" ]
 license = "MIT"
 repository = "M4tt1-Coder/LueLue-Game"

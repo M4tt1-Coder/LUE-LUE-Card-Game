@@ -18,19 +18,19 @@ use crate::backend::{
 /// Contains the utility functions for the `Claims` struct.
 ///
 /// It will be accessable in the context element in the handler functions.
-pub struct ClaimsRepository {
-    db: D1Database,
+pub struct ClaimsRepository<'a> {
+    db: &'a D1Database,
 }
 
 // ----- Implementation of the 'ClaimsRepository' struct -----
 
-impl ClaimsRepository {
+impl<'a> ClaimsRepository {
     /// Returns a fresh instance of `ClaimsRepository` struct.
     ///
     /// # Arguments
     ///
     /// - `db` -> Database service pointer to execute queries.
-    pub fn new(db: D1Database) -> Self {
+    pub fn new(db: &'a D1Database) -> Self {
         ClaimsRepository { db }
     }
 
@@ -85,7 +85,17 @@ impl ClaimsRepository {
     /// If both are `None`, all claims will be returned.
     ///
     /// # Returns a vector of `Claim` instances or an error if the query fails.
+    #[worker::send]
     pub async fn get_all_claims(
+        &self,
+        game_id: Option<&str>,
+        player_id: Option<&str>,
+        card_repository: &CardRepository,
+    ) -> Result<Vec<Claim>, Box<dyn ApplicationError>> {
+        self.get_all_claims_inner(game_id, player_id, card_repository).await
+    }
+
+    async fn get_all_claims_inner(
         &self,
         game_id: Option<&str>,
         player_id: Option<&str>,

@@ -15,21 +15,21 @@ use crate::backend::{
 ///
 /// It will be accessable in the context element in the handler functions.
 ///
-pub struct ChatRepository {
+pub struct ChatRepository<'a> {
     /// Database service pointer to execute queries.
     ///
     /// # Type
-    /// - `D1Database` -> D1Database instance to interact with the `chats` table.
-    db: D1Database,
+    /// - `&D1Database` -> D1Database instance to interact with the `chats` table.
+    db: &'a D1Database,
 }
 
-impl ChatRepository {
+impl<'a> ChatRepository {
     /// Uses the global `D1Database` service by referencing it.
     ///
     /// # Returns
     ///
     /// A new instantiated `ChatRepository` object.
-    pub fn new(db: D1Database) -> Self {
+    pub fn new(db: &'a D1Database) -> Self {
         ChatRepository { db }
     }
 
@@ -360,8 +360,12 @@ impl ChatRepository {
     ///
     /// -> Ok(chat), WHEN all operations succeed and a `CHAT` instance was found.
     /// -> Err(Box(dyn ApplicationError)), WHEN any kind of issue occurs.
-    ///
+    #[worker::send]
     pub async fn get_chat(&self, chat_id: Option<&str>, game_id: Option<&str>, chat_message_repo: &ChatMessageRepository) -> Result<Chat, Box<dyn ApplicationError>> {
+        self.get_chat_inner(chat_id, game_id, chat_message_repo).await
+    }
+
+    async fn get_chat_inner(&self, Option<&str>, game_id: Option<&str>, chat_message_repo: &ChatMessageRepository) -> Result<Chat, Box<dyn ApplicationError>> {
         let mut query_string = "SELECT * FROM chats ".to_string();
         let mut query_bindings: Vec<JsValue> = vec![];
 
@@ -401,6 +405,7 @@ impl ChatRepository {
                 return Err(Box::new(ProcessError::<Chat>::new(err.to_string(), "ChatRepository::get_chat".to_string(),  None)))
             }
         }
+
     }
 }
     }

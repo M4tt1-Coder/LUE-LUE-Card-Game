@@ -15,21 +15,21 @@ use crate::backend::{
 /// Contains the utility functions for the `ChatMessage` struct.
 ///
 /// It will be accessable in the context element in the handler functions.
-pub struct ChatMessageRepository {
+pub struct ChatMessageRepository<'a> {
     /// Database service pointer to execute queries.
     ///
     /// # Type
-    /// - `&'a D1Database` -> A reference to the D1Database instance.
-    db: D1Database,
+    /// - `&D1Database` -> A reference to the D1Database instance.
+    db: &'a D1Database,
 }
 
-impl ChatMessageRepository {
+impl<'a> ChatMessageRepository {
     /// Returns a fresh instance of `ChatMessageRepository` struct.
     ///
     /// # Arguments
     ///
     /// - `db` -> Database service to execute queries.
-    pub fn new(db: D1Database) -> Self {
+    pub fn new(db: &'a D1Database) -> Self {
         ChatMessageRepository { db }
     }
 
@@ -176,10 +176,15 @@ impl ChatMessageRepository {
     ///     Err(e) => eprintln!("Error retrieving messages: {}", e),
     ///  }
     ///  ```
+    #[worker::send]
     pub async fn get_all_messages_in_chat(
         &self,
         chat_id: &str,
     ) -> Result<Vec<ChatMessage>, Box<dyn ApplicationError>> {
+        self.get_all_messages_in_chat_inner(chat_id).await
+    }
+
+    async fn get_all_messages_in_chat_inner() -> Result<Vec<ChatMessage>, Box<dyn ApplicationError>> {
         let query = "SELECT * FROM chat_messages WHERE chat_id = ? ORDER BY created_at ASC;";
         let params = vec![JsValue::from(chat_id)];
 
