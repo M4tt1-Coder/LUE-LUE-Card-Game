@@ -17,17 +17,17 @@ use crate::backend::{
 /// Contains the utility functions for the `Card` struct.
 ///
 /// It will be accessible in the context element in the handler functions.
-pub struct CardRepository<'a> {
+pub struct CardRepository {
     /// Database pointer to execute queries.
     ///
     /// It is a reference to the D1 database instance.
     ///
     /// # Type
     /// - `&D1Database` -> Reference to the D1 database instance.
-    db: &'a D1Database,
+    db: D1Database,
 }
 
-impl<'a> CardRepository {
+impl CardRepository {
     /// Returns a fresh instance of `CardRepository` struct.
     ///
     /// # Arguments
@@ -35,7 +35,7 @@ impl<'a> CardRepository {
     /// - `db` -> Database service pointer to execute queries.
     ///
     /// # Returns a `CardRepository` instance.
-    pub fn new(db: &'a D1Database) -> Self {
+    pub fn new(db: D1Database) -> Self {
         CardRepository { db }
     }
 

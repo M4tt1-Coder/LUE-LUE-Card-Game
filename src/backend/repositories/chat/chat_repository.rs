@@ -14,22 +14,21 @@ use crate::backend::{
 /// Contains the utility functions for the `Chat` struct.
 ///
 /// It will be accessable in the context element in the handler functions.
-///
-pub struct ChatRepository<'a> {
+pub struct ChatRepository{
     /// Database service pointer to execute queries.
     ///
     /// # Type
     /// - `&D1Database` -> D1Database instance to interact with the `chats` table.
-    db: &'a D1Database,
+    db: D1Database,
 }
 
-impl<'a> ChatRepository {
+impl ChatRepository {
     /// Uses the global `D1Database` service by referencing it.
     ///
     /// # Returns
     ///
     /// A new instantiated `ChatRepository` object.
-    pub fn new(db: &'a D1Database) -> Self {
+    pub fn new(db: D1Database) -> Self {
         ChatRepository { db }
     }
 

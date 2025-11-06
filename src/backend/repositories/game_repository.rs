@@ -25,12 +25,12 @@ use worker::{ D1Database, console_debug };
 /// # Properties
 ///
 /// `db`: An instance of `D1Database` that provides access to the D1 database.
-pub struct GameRepository<'a> {
+pub struct GameRepository {
     /// The D1 database instance used for accessing game data.
-    db: &'a D1Database,
+    db: D1Database,
 }
 
-impl<'a> GameRepository {
+impl GameRepository {
     /// Creates a new `GameRepository` instance with the provided D1 database.
     ///
     /// # Arguments

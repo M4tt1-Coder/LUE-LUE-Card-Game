@@ -21,14 +21,14 @@ use crate::backend::{
 /// # Properties
 ///
 /// `db`: An instance of `D1Database` that provides access to the D1 database.
-pub struct PlayerRepository<'a> {
+pub struct PlayerRepository {
     /// The D1 database instance used for accessing player data.
-    db: &'a D1Database,
+    db: D1Database,
 }
 
 // ----- Implementation of 'PlayerRepository' -----
 
-impl<'a> PlayerRepository {
+impl PlayerRepository {
     /// Creates a new `PlayerRepository` instance with the provided D1 database.
     ///
     /// # Arguments
@@ -38,7 +38,7 @@ impl<'a> PlayerRepository {
     /// # Returns
     ///
     /// A new `PlayerRepository` instance.
-    pub fn new(db: &'a D1Database) -> Self {
+    pub fn new(db: D1Database) -> Self {
         PlayerRepository { db }
     }
 

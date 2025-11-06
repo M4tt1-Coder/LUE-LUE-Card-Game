@@ -15,21 +15,21 @@ use crate::backend::{
 /// Contains the utility functions for the `ChatMessage` struct.
 ///
 /// It will be accessable in the context element in the handler functions.
-pub struct ChatMessageRepository<'a> {
+pub struct ChatMessageRepository {
     /// Database service pointer to execute queries.
     ///
     /// # Type
     /// - `&D1Database` -> A reference to the D1Database instance.
-    db: &'a D1Database,
+    db: D1Database,
 }
 
-impl<'a> ChatMessageRepository {
+impl ChatMessageRepository {
     /// Returns a fresh instance of `ChatMessageRepository` struct.
     ///
     /// # Arguments
     ///
     /// - `db` -> Database service to execute queries.
-    pub fn new(db: &'a D1Database) -> Self {
+    pub fn new(db: D1Database) -> Self {
         ChatMessageRepository { db }
     }
 

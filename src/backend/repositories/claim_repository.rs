@@ -18,19 +18,19 @@ use crate::backend::{
 /// Contains the utility functions for the `Claims` struct.
 ///
 /// It will be accessable in the context element in the handler functions.
-pub struct ClaimsRepository<'a> {
-    db: &'a D1Database,
+pub struct ClaimsRepository {
+    db: D1Database,
 }
 
 // ----- Implementation of the 'ClaimsRepository' struct -----
 
-impl<'a> ClaimsRepository {
+impl ClaimsRepository {
     /// Returns a fresh instance of `ClaimsRepository` struct.
     ///
     /// # Arguments
     ///
     /// - `db` -> Database service pointer to execute queries.
-    pub fn new(db: &'a D1Database) -> Self {
+    pub fn new(db: D1Database) -> Self {
         ClaimsRepository { db }
     }
 
